@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CipherProbe</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3a;
+    --border-glow: #4f46e5;
+    --text: #e2e2ec;
+    --text-dim: #8888a0;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --radius: 12px;
+    --font: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ──────────────────────────────────────── */
+  header {
+    padding: 32px 40px 0;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header span {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* ── Tabs ────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 24px 40px 0;
+  }
+  .tab {
+    padding: 10px 22px;
+    font-size: 13px;
+    font-family: var(--font);
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: var(--radius) var(--radius) 0 0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); background: var(--surface); }
+  .tab.active {
+    color: var(--accent-hover);
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  /* ── Main Panel ──────────────────────────────────── */
+  .panel-wrap {
+    flex: 1;
+    padding: 0 40px 40px;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) var(--radius);
+    padding: 32px;
+    display: none;
+    animation: fadeIn 0.25s ease;
+  }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Form Elements ───────────────────────────────── */
+  label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .cipher-select {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .cipher-btn {
+    position: relative;
+    padding: 14px 10px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    cursor: pointer;
+    text-align: center;
+    font-family: var(--font);
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+  .cipher-btn:hover { border-color: var(--accent); color: var(--text); }
+  .cipher-btn.selected {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--text);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
+  }
+  .cipher-btn .level { font-size: 18px; font-weight: 700; display: block; margin-bottom: 4px; }
+  .cipher-btn .diff {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .diff-Baseline { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+  .diff-Easy { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .diff-Medium { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+  .diff-Hard { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+  .diff-Very-Hard { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .diff-Extreme { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 16px;
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.6;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-dim); opacity: 0.5; }
+
+  .input-row {
+    margin-bottom: 24px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  button.action {
+    padding: 12px 28px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  button.action:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  button.action:active { transform: translateY(0); }
+
+  .hint-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+    cursor: pointer;
+    user-select: none;
+  }
+  .hint-toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+  /* ── Output ──────────────────────────────────────── */
+  .output-box {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-height: 60px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .output-box.empty {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  .output-box .copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 14px;
+    font-family: var(--font);
+    font-size: 11px;
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .output-box .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+  .output-box .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+  .output-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  /* ── Score Badge ─────────────────────────────────── */
+  .score {
+    display: inline-block;
+    font-size: 22px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+  }
+  .score.perfect { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .score.partial { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+  .score.low { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+
+  /* ── Chat Flow ───────────────────────────────────── */
+  .chat-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .flow-step { }
+  .flow-arrow {
+    text-align: center;
+    font-size: 20px;
+    color: var(--accent);
+    padding: 2px 0;
+  }
+  .verdict-box {
+    padding: 16px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .verdict-box.success {
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: var(--green);
+  }
+  .verdict-box.fail {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    color: var(--red);
+  }
+  .verdict-box.unclear {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--amber);
+  }
+
+  /* ── Test Results ─────────────────────────────────── */
+  .test-status {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .test-status .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: border-color 0.3s;
+  }
+  .result-card.pass { border-left: 3px solid var(--green); }
+  .result-card.fail { border-left: 3px solid var(--red); }
+  .result-card.partial-match { border-left: 3px solid var(--amber); }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .result-header .cipher-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .result-header .score-pill {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 99px;
+  }
+  .score-pill.s-perfect { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .score-pill.s-partial { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+  .score-pill.s-low { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+
+  .result-detail {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .result-detail summary {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 10px;
+  }
+  .result-detail summary:hover { color: var(--text); }
+  .result-detail .model-response {
+    margin-top: 8px;
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .result-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .result-row .lbl {
+    color: var(--text-dim);
+    min-width: 80px;
+  }
+
+  .test-summary {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .test-summary .stat {
+    text-align: center;
+    flex: 1;
+  }
+  .test-summary .stat .num {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+  }
+  .test-summary .stat .lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  select.model-select {
+    padding: 10px 16px;
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+    cursor: pointer;
+  }
+  select.model-select:focus { border-color: var(--accent); }
+
+  /* ── Responsive ──────────────────────────────────── */
+  @media (max-width: 800px) {
+    header, .tabs, .panel-wrap { padding-left: 20px; padding-right: 20px; }
+    .cipher-select { grid-template-columns: repeat(3, 1fr); }
+    .panel { padding: 20px; }
+  }
+  @media (max-width: 500px) {
+    .cipher-select { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CipherProbe</h1>
+  <span>Novel cipher suite for AI reasoning experiments</span>
+</header>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="encrypt">Encrypt</button>
+  <button class="tab" data-tab="decrypt">Decrypt</button>
+  <button class="tab" data-tab="challenge">Challenge</button>
+  <button class="tab" data-tab="chat">Encrypted Chat</button>
+  <button class="tab" data-tab="test">Test Model</button>
+  <button class="tab" data-tab="verify">Verify</button>
+</div>
+
+<div class="panel-wrap">
+
+  <!-- ── ENCRYPT ──────────────────────────────── -->
+  <div class="panel active" id="panel-encrypt">
+    <label>Select cipher</label>
+    <div class="cipher-select" id="cs-encrypt"></div>
+
+    <div class="input-row">
+      <label>Plaintext</label>
+      <textarea id="enc-input" placeholder="Type the message you want to encrypt..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="action" onclick="doEncrypt()">Encrypt</button>
+    </div>
+
+    <div class="output-label"><label>Encrypted output</label></div>
+    <div class="output-box empty" id="enc-output">Output will appear here</div>
+  </div>
+
+  <!-- ── DECRYPT ──────────────────────────────── -->
+  <div class="panel" id="panel-decrypt">
+    <label>Select cipher</label>
+    <div class="cipher-select" id="cs-decrypt"></div>
+
+    <div class="input-row">
+      <label>Ciphertext</label>
+      <textarea id="dec-input" placeholder="Paste encrypted text here..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="action" onclick="doDecrypt()">Decrypt</button>
+    </div>
+
+    <div class="output-label"><label>Decrypted output</label></div>
+    <div class="output-box empty" id="dec-output">Output will appear here</div>
+  </div>
+
+  <!-- ── CHALLENGE ────────────────────────────── -->
+  <div class="panel" id="panel-challenge">
+    <label>Select cipher</label>
+    <div class="cipher-select" id="cs-challenge"></div>
+
+    <div class="input-row">
+      <label>Hidden instruction</label>
+      <textarea id="ch-input" placeholder="Type the instruction you want the model to decipher and execute..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="action" onclick="doChallenge()">Generate Challenge</button>
+      <label class="hint-toggle">
+        <input type="checkbox" id="ch-hint" checked> Include hint
+      </label>
+    </div>
+
+    <div class="output-label"><label>Challenge prompt &mdash; paste this to the model</label></div>
+    <div class="output-box empty" id="ch-output">Challenge prompt will appear here</div>
+
+    <div style="margin-top: 20px">
+      <div class="output-label"><label>Answer key (for you)</label></div>
+      <div class="output-box empty" id="ch-answer"></div>
+    </div>
+  </div>
+
+  <!-- ── ENCRYPTED CHAT ────────────────────────── -->
+  <div class="panel" id="panel-chat">
+    <label>Select cipher</label>
+    <div class="cipher-select" id="cs-chat"></div>
+
+    <div class="input-row">
+      <label>Your prompt (will be encrypted before sending)</label>
+      <textarea id="chat-input" placeholder="e.g. What is the capital of France?"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <select class="model-select" id="chat-model">
+        <option value="gpt-4o-mini">GPT-4o Mini</option>
+        <option value="gpt-4o">GPT-4o</option>
+        <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+        <option value="gpt-4.1">GPT-4.1</option>
+        <option value="o4-mini">o4-mini</option>
+        <option value="gpt-5">GPT-5</option>
+      </select>
+      <select class="model-select" id="chat-hint">
+        <option value="none">No instructions</option>
+        <option value="light" selected>Light: "Respond in same format"</option>
+        <option value="medium">Medium: "Message is encoded, respond encoded"</option>
+      </select>
+      <button class="action" id="chat-btn" onclick="doChat()">Send Encrypted</button>
+    </div>
+
+    <div id="chat-results" style="display:none">
+      <div class="chat-flow">
+        <div class="flow-step">
+          <div class="output-label"><label>1. Your prompt (plaintext)</label></div>
+          <div class="output-box" id="chat-original"></div>
+        </div>
+        <div class="flow-arrow">&#x2193;</div>
+        <div class="flow-step">
+          <div class="output-label"><label>2. What the model received (encrypted)</label></div>
+          <div class="output-box" id="chat-sent"></div>
+        </div>
+        <div class="flow-arrow">&#x2193;</div>
+        <div class="flow-step">
+          <div class="output-label"><label>3. Model's raw response</label></div>
+          <div class="output-box" id="chat-raw"></div>
+        </div>
+        <div class="flow-arrow">&#x2193;</div>
+        <div class="flow-step">
+          <div class="output-label"><label>4. Decrypted response (applying same cipher in reverse)</label></div>
+          <div class="output-box" id="chat-decrypted"></div>
+        </div>
+      </div>
+      <div id="chat-verdict" style="margin-top: 16px"></div>
+    </div>
+  </div>
+
+  <!-- ── TEST MODEL ────────────────────────────── -->
+  <div class="panel" id="panel-test">
+    <div class="input-row">
+      <label>Test message (the model will try to decrypt this)</label>
+      <textarea id="test-input" placeholder="e.g. Write a haiku about the ocean">Write a haiku about the ocean</textarea>
+    </div>
+
+    <div class="btn-row">
+      <select class="model-select" id="test-model">
+        <option value="gpt-4o-mini">GPT-4o Mini</option>
+        <option value="gpt-4o">GPT-4o</option>
+        <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+        <option value="gpt-4.1">GPT-4.1</option>
+        <option value="o4-mini">o4-mini</option>
+        <option value="gpt-5">GPT-5</option>
+      </select>
+      <button class="action" id="test-btn" onclick="doTestAll()">Run All 6 Levels</button>
+      <label class="hint-toggle">
+        <input type="checkbox" id="test-hint" checked> Include hints
+      </label>
+    </div>
+
+    <div id="test-results"></div>
+  </div>
+
+  <!-- ── VERIFY ───────────────────────────────── -->
+  <div class="panel" id="panel-verify">
+    <div class="input-row">
+      <label>Original plaintext</label>
+      <textarea id="ver-original" placeholder="The original message before encryption..."></textarea>
+    </div>
+
+    <div class="input-row">
+      <label>Model's decryption attempt</label>
+      <textarea id="ver-attempt" placeholder="What the model thinks the decrypted message is..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="action" onclick="doVerify()">Verify</button>
+    </div>
+
+    <div id="ver-result"></div>
+  </div>
+
+</div>
+
+<script>
+const DIFF_CLASS = {
+  'Baseline': 'diff-Baseline',
+  'Easy': 'diff-Easy',
+  'Medium': 'diff-Medium',
+  'Hard': 'diff-Hard',
+  'Very Hard': 'diff-Very-Hard',
+  'Extreme': 'diff-Extreme',
+};
+
+let ciphers = {};
+let selected = { encrypt: 1, decrypt: 1, challenge: 1, chat: 1 };
+
+// ── Init ────────────────────────────────────────────
+async function init() {
+  const res = await fetch('/api/ciphers');
+  ciphers = await res.json();
+  ['encrypt', 'decrypt', 'challenge', 'chat'].forEach(renderCipherSelect);
+}
+
+function renderCipherSelect(panel) {
+  const el = document.getElementById('cs-' + panel);
+  el.innerHTML = '';
+  for (const [id, info] of Object.entries(ciphers)) {
+    const btn = document.createElement('button');
+    btn.className = 'cipher-btn' + (parseInt(id) === selected[panel] ? ' selected' : '');
+    const diffSafe = info.difficulty.replace(/\s/g, '-');
+    btn.innerHTML =
+      `<span class="level">${id}</span>${info.name}<span class="diff ${DIFF_CLASS[info.difficulty] || ''}">${info.difficulty}</span>`;
+    btn.onclick = () => {
+      selected[panel] = parseInt(id);
+      el.querySelectorAll('.cipher-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    el.appendChild(btn);
+  }
+}
+
+// ── Tabs ────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ── API calls ───────────────────────────────────────
+async function doEncrypt() {
+  const text = document.getElementById('enc-input').value;
+  if (!text) return;
+  const res = await fetch('/api/encrypt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level: selected.encrypt, text }),
+  });
+  const data = await res.json();
+  setOutput('enc-output', data.result);
+}
+
+async function doDecrypt() {
+  const text = document.getElementById('dec-input').value;
+  if (!text) return;
+  const res = await fetch('/api/decrypt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level: selected.decrypt, text }),
+  });
+  const data = await res.json();
+  setOutput('dec-output', data.result);
+}
+
+async function doChallenge() {
+  const text = document.getElementById('ch-input').value;
+  if (!text) return;
+  const includeHint = document.getElementById('ch-hint').checked;
+  const res = await fetch('/api/challenge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level: selected.challenge, text, includeHint }),
+  });
+  const data = await res.json();
+  setOutput('ch-output', data.prompt);
+  setOutput('ch-answer', `Original:  ${text}\nEncrypted: ${data.encrypted}\nCipher:    Level ${data.level} — ${data.cipher}`);
+}
+
+async function doVerify() {
+  const original = document.getElementById('ver-original').value;
+  const attempt = document.getElementById('ver-attempt').value;
+  if (!original || !attempt) return;
+  const res = await fetch('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ original, attempt }),
+  });
+  const data = await res.json();
+  const el = document.getElementById('ver-result');
+  if (data.match) {
+    el.innerHTML = `<div class="score perfect">100% — Exact Match</div><p style="color:var(--green)">The model fully decrypted the message.</p>`;
+  } else {
+    const cls = data.score >= 60 ? 'partial' : 'low';
+    el.innerHTML = `<div class="score ${cls}">${data.score}% similarity</div><p style="color:var(--text-dim)">The model's attempt did not match the original.</p>`;
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────
+function setOutput(id, text) {
+  const el = document.getElementById(id);
+  el.classList.remove('empty');
+  el.textContent = text;
+  // Add copy button
+  const existing = el.querySelector('.copy-btn');
+  if (existing) existing.remove();
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.textContent = 'Copy';
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  };
+  el.style.position = 'relative';
+  el.appendChild(btn);
+}
+
+// ── Encrypted Chat ──────────────────────────────────
+async function doChat() {
+  const text = document.getElementById('chat-input').value;
+  if (!text) return;
+  const model = document.getElementById('chat-model').value;
+  const hintLevel = document.getElementById('chat-hint').value;
+  const btn = document.getElementById('chat-btn');
+  const results = document.getElementById('chat-results');
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  results.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: selected.chat, text, model, hintLevel }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      results.style.display = 'block';
+      document.getElementById('chat-verdict').innerHTML =
+        `<div class="verdict-box fail">Error: ${escapeHtml(data.error)}</div>`;
+      return;
+    }
+
+    results.style.display = 'block';
+    setOutput('chat-original', data.original_prompt);
+    setOutput('chat-sent', data.encrypted_prompt);
+    setOutput('chat-raw', data.raw_response);
+    setOutput('chat-decrypted', data.decrypted_response);
+
+    // Verdict: does the decrypted response look like a coherent answer?
+    const raw = data.raw_response;
+    const dec = data.decrypted_response;
+    const enc = data.encrypted_prompt;
+
+    // Check if the raw response looks like it's in the same cipher
+    // (rough heuristic: if raw != decrypted and decrypted has more real words)
+    const realWordCount = (s) => s.split(/\s+/).filter(w => /^[a-zA-Z]{2,}$/.test(w)).length;
+    const rawWords = realWordCount(raw);
+    const decWords = realWordCount(dec);
+
+    document.getElementById('chat-verdict').innerHTML = '';
+
+  } catch (e) {
+    results.style.display = 'block';
+    document.getElementById('chat-verdict').innerHTML =
+      `<div class="verdict-box fail">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Encrypted';
+  }
+}
+
+// ── Test Model ──────────────────────────────────────
+async function doTestAll() {
+  const text = document.getElementById('test-input').value;
+  if (!text) return;
+  const model = document.getElementById('test-model').value;
+  const includeHint = document.getElementById('test-hint').checked;
+  const btn = document.getElementById('test-btn');
+  const container = document.getElementById('test-results');
+
+  btn.disabled = true;
+  btn.textContent = 'Running...';
+  container.innerHTML = `<div class="test-status"><span class="spinner"></span>Testing all 6 cipher levels against ${model}... this may take a minute.</div>`;
+
+  try {
+    const res = await fetch('/api/test-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, model, includeHint }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      container.innerHTML = `<div class="test-status" style="color:var(--red)">Error: ${data.error}</div>`;
+      return;
+    }
+
+    const passed = data.results.filter(r => r.match).length;
+    const partial = data.results.filter(r => !r.match && r.score >= 50).length;
+    const failed = data.results.filter(r => !r.match && r.score < 50).length;
+    const avgScore = Math.round(data.results.reduce((s, r) => s + r.score, 0) / data.results.length);
+
+    let html = `
+      <div class="test-summary">
+        <div class="stat"><span class="num" style="color:var(--green)">${passed}</span><span class="lbl">Cracked</span></div>
+        <div class="stat"><span class="num" style="color:var(--amber)">${partial}</span><span class="lbl">Partial</span></div>
+        <div class="stat"><span class="num" style="color:var(--red)">${failed}</span><span class="lbl">Failed</span></div>
+        <div class="stat"><span class="num" style="color:var(--accent-hover)">${avgScore}%</span><span class="lbl">Avg Score</span></div>
+      </div>`;
+
+    for (const r of data.results) {
+      const cls = r.match ? 'pass' : (r.score >= 50 ? 'partial-match' : 'fail');
+      const pillCls = r.match ? 's-perfect' : (r.score >= 50 ? 's-partial' : 's-low');
+      const scoreLabel = r.match ? '100% CRACKED' : `${r.score}%`;
+
+      html += `
+        <div class="result-card ${cls}">
+          <div class="result-header">
+            <span class="cipher-name">Level ${r.level} — ${r.cipher} <span class="diff ${DIFF_CLASS[r.difficulty] || ''}">${r.difficulty}</span></span>
+            <span class="score-pill ${pillCls}">${scoreLabel}</span>
+          </div>
+          <div class="result-detail">
+            <div class="result-row"><span class="lbl">Encrypted:</span><span>${r.encrypted}</span></div>
+            <div class="result-row"><span class="lbl">Extracted:</span><span>${r.extracted_attempt || '(could not extract)'}</span></div>
+            ${r.error ? `<div class="result-row" style="color:var(--red)"><span class="lbl">Error:</span><span>${r.error}</span></div>` : ''}
+            <details>
+              <summary>Show full model response</summary>
+              <div class="model-response">${escapeHtml(r.model_response || '')}</div>
+            </details>
+          </div>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<div class="test-status" style="color:var(--red)">Request failed: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run All 6 Levels';
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+init();
+</script>
+</body>
+</html>
