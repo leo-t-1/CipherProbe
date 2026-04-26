@@ -32,6 +32,28 @@ Key findings:
 - Levels 3-5 defeated all models, including GPT-5
 - The gap between known ciphers (100%) and novel ciphers (0%) is stark
 
+## Limitations
+
+The numbers above should be read as exploratory, not as a benchmark:
+
+- **Sample size:** each cell is 30 trials; no formal statistical tests or confidence intervals.
+- **Single prompt** (*"Write a haiku about the ocean"*): results almost certainly vary with prompt content, length, and topic.
+- **Hints enabled.** With hints removed (i.e. the model isn't told a cipher is in use), scores drop sharply across the board. Both regimes are interesting; only the with-hints regime is reported here.
+- **Coupled failure modes.** "Score" conflates *decryption failure* with *instruction-following failure*. A model that correctly decrypts the prompt but writes a non-haiku still scores 0. Cleaner per-step scoring (identify cipher / decrypt / produce output) would separate these.
+- **Binary scoring.** No partial credit for "almost decrypted" — a single-character error fails the trial.
+- **OpenAI-only.** Anthropic Claude, Google Gemini, and open-weight reasoning models (DeepSeek-R1, etc.) are not tested. The "no model cracks L3+" claim is therefore overstated until those are added.
+- **"Novel" is unverifiable.** I can argue these ciphers are absent from training data, but I can't prove it. A future model that has seen similar constructions will look like it's "reasoning" when it's actually pattern-matching.
+- **Crackable in principle ≠ crackable in practice.** L1 and L2 are decidable from a single ciphertext given enough chain-of-thought; the result is partly a measure of available reasoning depth, not just cipher difficulty.
+
+## Next Steps
+
+- Add Claude (Anthropic) and Gemini models to the table; add at least one open-weight reasoning model.
+- Run the no-hints regime in parallel and report both columns.
+- Decompose scoring: did the model (a) identify the cipher, (b) produce correct plaintext, (c) produce a valid output? Track each separately.
+- Replace binary scoring with edit-distance to ground truth.
+- Larger, more diverse prompt set across topics and lengths.
+- Adversarial extension: encrypt safety-relevant prompts with novel ciphers and measure whether the cipher bypasses refusal training, following [Yuan et al. (2024)](https://arxiv.org/abs/2402.10601). This is the safety-evals angle and the more interesting next step.
+
 ## Ciphers
 
 | Level | Name | How It Works |
